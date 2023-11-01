@@ -1,36 +1,18 @@
-pipeline{
- environment {
- registry = "username/vatcal"
-        registryCredentials = "dockerhub_id"
-        dockerImage = ""
-    }
-    agent any
-        stages {
-            stage ('Build Docker Image'){
-                steps{
-                    script {
-                        dockerImage = docker.build(registry)
-                    }
-                }
-            }
+FROM node:19-alpine
 
-            stage ("Push to Docker Hub"){
-                steps {
-                    script {
-                        docker.withRegistry('', registryCredentials) {
-                            dockerImage.push("${env.BUILD_NUMBER}")
-                            dockerImage.push("latest")
-                        }
-                    }
-                }
-            }
+# change into a folder called /app
+WORKDIR /app
 
-            stage ("Clean up"){
-                steps {
-                    script {
-                        sh 'docker image prune --all --force --filter "until=48h"'
-                           }
-                }
-            }
-        }
-}
+# only copy package.json
+COPY package.json .
+
+# download the project dependencies
+RUN npm install
+
+# copy everything from the react app folder to the /app folder in the container
+COPY . .
+
+# package up the react project in the /app directory
+RUN npm run build
+
+CMD ["npm", "run", "start"]
